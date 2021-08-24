@@ -1981,7 +1981,7 @@ def validPoints(times, majorFreqs, majorDev, majorAmp, pTimes, pFreqs, caLow, st
     
     for t in times[2:-2]:
         tIdx = np.abs(pTimes - t).argmin()
-        tCount = (np.abs(pFreqs[max(tIdx-5, 0):tIdx+6l] - pFreqs[tIdx]) < 5000).sum()
+        tCount = (np.abs(pFreqs[max(tIdx-5, 0):(tIdx+6)] - pFreqs[tIdx]) < 5000).sum()
         mask.append(tCount > 3)
     
     mask = np.array([True, True] + mask + [True, True])
