@@ -1,6 +1,11 @@
-# Raspy Classification Tool Quick-Start Guide 
+# Rat-Call-Classification-Tool
 
-## Tool Anatomy:
+## Description:
+This tool is used for the manual classification and exploration of ultrasonic rat vocalizations, and has an intuitive user interface for doing this.  It's primary use case is to generate a set of manual classificiations of recordings of rat audio, so that machine learning models could be trained on the data.
+
+## Raspy Classification Tool Quick-Start Guide 
+
+### Tool Anatomy:
 
 ![Image Of Tool](https://lh3.googleusercontent.com/9VOkL2UMKDayPiYjABYDyWeZjNbBG7WduOMmtmR2LtPrPe0eiguTtdpwAZlHrDKlps7AL9Tyyq58Kk9EdWqq_izADOqivom6P2g6r0RC7QkIv-W_qHazqQk76cV9nY6u7gjra2SFPeVoc28RcvxrWsCpCDRhxMIwp6WvXb1KiG2F4CVE6Op5iYjG03DqPGby8WIMPcvKv-gZHpPRvdzWQorDfcQubZmPY62UZjV7W6-O60hB6efZ1ZkoAso1zKftnUlDu4_v4RvdzIiovLTs_7FHcvKluJMjhRKaztrF1R3YaWsJgm6PGVHhLFSEUw9FUIooJ51LAlxakgcefWjPzZUiq-uQlI3O4A5KtwRcl6CBKyeK5Iu8C1UTxGOI1b9gRJF8d2yhjJ5Kdt3uPDNtQd_lFV0ED8Jv5Aai_aR069p8XovXJEHpjs7LRBwjKYDfhia4vtzrr_3AeXJX4x0C4lpl9s3Foax6vEqOf4gGjeOInFFPczIXUSqiwGEAWGHPhEMKFNOwlfVGVNuKpV84p9uoFnXzjvKrolpIjq3-IaiUDxY87-sElyKVdmE8izMz40WrMZVKPVUJZyQglz7Zit_pzeOy-Ke04WUoN3EwQg9lIlC_J3wwOpxOpE7eS_QwaNByFYNCwT0r4z4rxK7Zjd-Qj6zFDzbVl92R0imHqDYC_r-ZFIhDaqVAJOjhucewWU4-hq00o7xzYyzv-khj_-8p=w898-h961-no?authuser=0)
 
@@ -15,7 +20,7 @@ F | Classification Viewer | Shows the classification of the call where the mouse
 G | Current File | Displays the .wav file currently being viewed. 
 
 
-## First Use Step-By-Step Guide:
+### First Use Step-By-Step Guide:
 
 1. Click on the ‘File’ menu on the top left of the window, then select ‘Open New File’ 
 2. Select a .wav file to open, then specify the sampling rate.  If the file is large, it will split it into multiple chunks, then load the spectrogram for the first one (will load the entire spectrogram if it’s a small file). 
@@ -31,7 +36,7 @@ G | Current File | Displays the .wav file currently being viewed.
 12. Press The X button  to close the window then save your work when prompted. 
 13. The classification information (and various other relevant data) can then be found in the same directory as the original .wav file selected, within a folder with the same name as the original selected .wav file 
 
-## Hotkey Cheat-Sheet:
+### Hotkey Cheat-Sheet:
 
 *Hotkey* | *What it does* 
 :---: | ---
@@ -42,3 +47,11 @@ Left/Right Arrows | Moves between the files (generated when the initial .wav fil
 Z | Zooms into the segment/call currently selected 
 Ctrl + Left/Right Arrows  | Zooms into the next or previous segment/call (relative to the call currently selected) 
 Delete | Removes the classification currently selected 
+
+## Support:
+
+This work is supported by the US Army Medical Research and Materiel Command under Contract Number W81XWH18C014224.
+
+The views, opinions and/or findings contained in this report are those of the author(s) and should not be construed as an official Department of the Army position, policy or decision unless so designated by other documentation
+
+In conducting research using animals, the investigator(s) adhered to the Animal Welfare Act Regulations and other Federal statutes relating to animals and experiments involving animals and the principles set forth in the current version of the Guide for Care and Use of Laboratory Animals, National Research Council.
