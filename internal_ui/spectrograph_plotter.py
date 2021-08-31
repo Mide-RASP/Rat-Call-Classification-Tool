@@ -1,8 +1,3 @@
-"""
-The code for the two vertical lines is based on the bounding rectangle in the following repository:
-https://github.com/ashokfernandez/wxPython-Rectangle-Selector-Panel
-"""
-
 from __future__ import division
 
 import wx
@@ -86,7 +81,7 @@ class SpecPlotter(wx.Panel):
 		"""
 		self.log_scale = not self.log_scale
 
-		##### REDRAW SPECTROGRAM #####
+		##### TODO: REDRAW SPECTROGRAM #####
 
 	def toggle_dynamic_colormap_range(self, actually_toggle_value=True):
 		if actually_toggle_value:
@@ -218,7 +213,7 @@ class SpecPlotter(wx.Panel):
 		self.line0.set_xdata(self.x0)
 		self.line1.set_xdata(self.x1)
 
-		# SHOULD self.pressed BE CHANGED??????????????????????
+		# SHOULD self.pressed BE CHANGED???
 		if redraw:
 			self.canvas.draw()
 
@@ -350,7 +345,7 @@ class SpecPlotter(wx.Panel):
 
 		self.time_lims = self.x_axis_scaler(x_lims)
 		self.axes.set_xlim(x_lims)
-		self.x_lims = (self.x0, self.x1) = x_lims  #######I PROBABLY SHOULDN'T SET self.x0 or self.x1##################################################
+		self.x_lims = (self.x0, self.x1) = x_lims  # I PROBABLY SHOULDN'T SET self.x0 or self.x1
 
 		# If either of the two lines are outside of the currently viewed window, clear them
 		if self.x0 > self.line0.get_xdata() or self.line0.get_xdata() > self.x1 or \

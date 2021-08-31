@@ -1,4 +1,13 @@
-from __future__ import division
+# from PyInstaller import log as logging
+# from PyInstaller import compat
+# from os import listdir
+# from os.path import join
+#
+# mkldir = join(compat.base_prefix, "Library", "bin")
+# binaries = [(join(mkldir, mkl), '') for mkl in listdir(mkldir) if mkl.startswith('mkl_')]
+
+import sys
+sys.path.append('..')
 
 import wx
 import os
@@ -14,30 +23,26 @@ import json
 import shutil
 import csv
 
+# Here to appease PyInstaller
+import scipy
+import scipy.special
+import scipy.special.cython_special
+
 from sortedcontainers import SortedDict
 from collections import defaultdict
 
-
-# from raspy_tools import export_dialog, export_utils  # EVENTUALLY ALL CODE HOUSED IN RaspLab MUST BE MOVED TO THE Raspy PROJECT#########
-import export_utils_copy as export_utils
-
-from raspy.core import Rasper
 from raspy.runRaspy import maxFileSize, splitLargeFile
 from raspy.argEstimator import estimateArgs
+from raspy.ann_inference import classify_calls_transfer_learning
 
 from spectrograph_plotter import SpecPlotter
 from segmenter_ui import Segmenter
 from ui_helper import YesNoDialog, IntegerEntryDialog, ColormapMinMaxDialog
 
 
-progress_style = (wx.PD_CAN_ABORT | wx.PD_APP_MODAL | wx.PD_ESTIMATED_TIME ########TAKEN FROM run_wrapper
-                  | wx.PD_REMAINING_TIME)
-
 
 class MainWindow(wx.Frame):
 	"""
-	Rasper could likely take advantage of librosa or something similar for optimization
-
 	TODO:
 	 - Have naming convensions for scaling functions be consistent between segmenter and spectrogram plotter
 	 (I think they're currently exactly the opposite)
@@ -47,19 +52,19 @@ class MainWindow(wx.Frame):
 	"""
 	DEFAULT_ZOOM_RATIO = .1
 
-	ID_RENDER_RASPY = wx.NewId()
-	ID_RASPY_SEGMENT = wx.NewId()
-	ID_NEXT_FILE = wx.NewId()
-	ID_PREVIOUS_FILE = wx.NewId()
-	ID_GOTO_FILE = wx.NewId()
-	ID_GOTO_SEGMENT = wx.NewId()
-	ID_ZOOM_SEGMENT = wx.NewId()
-	ID_TOGGLE_LOG_SCALE = wx.NewId()
-	ID_SAVE_FILE = wx.NewId()
-	ID_OPEN_DIR = wx.NewId()
-	ID_DYNAMIC_COLORMAP_RANGE = wx.NewId()
-	ID_SET_CMAP_BOUNDS = wx.NewId()
-	ID_OPEN_CMAP_SAMPLE = wx.NewId()
+	ID_RENDER_RASPY = wx.NewIdRef()
+	ID_RASPY_SEGMENT = wx.NewIdRef()
+	ID_NEXT_FILE = wx.NewIdRef()
+	ID_PREVIOUS_FILE = wx.NewIdRef()
+	ID_GOTO_FILE = wx.NewIdRef()
+	ID_GOTO_SEGMENT = wx.NewIdRef()
+	ID_ZOOM_SEGMENT = wx.NewIdRef()
+	ID_TOGGLE_LOG_SCALE = wx.NewIdRef()
+	ID_SAVE_FILE = wx.NewIdRef()
+	ID_OPEN_DIR = wx.NewIdRef()
+	ID_DYNAMIC_COLORMAP_RANGE = wx.NewIdRef()
+	ID_SET_CMAP_BOUNDS = wx.NewIdRef()
+	ID_OPEN_CMAP_SAMPLE = wx.NewIdRef()
 
 	timeScalar = 1.0 / (10 ** 6)  # Taken from RaspLab's viewer.py file
 
@@ -82,35 +87,34 @@ class MainWindow(wx.Frame):
 		self.cur_file_index = 0
 
 		self.samp_freq = None
-		self.rasper = None
 		self.args = None
+		
+		self.tf_model = None
+		
 
 		# A "-1" in the size parameter instructs wxWidgets to use the default size.
 		# In this case, we select 200px width and the default height.
 		wx.Frame.__init__(self, parent, title=title, size=(200, -1))
 		self.spec_panel = SpecPlotter(self)
-		self.status_bar = self.CreateStatusBar(3)  # A Statusbar in the bottom of the window
+		self.status_bar = self.CreateStatusBar(4)  # A Statusbar in the bottom of the window
 
 		# Setting up the menu.
 		self.filemenu = wx.Menu()
 		menu_open_file = self.filemenu.Append(wx.ID_OPEN, "Open New &File", " Open a .wav file to edit")
 		menu_open_dir = self.filemenu.Append(self.ID_OPEN_DIR, "&Open Existing Run", " Open an existing directory created by this program")
-		menu_run = self.filemenu.Append(self.ID_RENDER_RASPY, "&Run Classification", " Runs the Raspy algorithm")
-		# menu_segment = self.filemenu.Append(self.ID_RASPY_SEGMENT, "&Segment File", " Runs the Raspy segmenter on the data")
+		menu_run = self.filemenu.Append(self.ID_RENDER_RASPY, "&Run Classification\tF1", " Runs the Raspy algorithm")
+		menu_segment = self.filemenu.Append(self.ID_RASPY_SEGMENT, "&Segment File\tF5", " Runs the Raspy segmenter on the data")
 		menu_open_next = self.filemenu.Append(self.ID_NEXT_FILE, "&Next File\t-->", " Moves to the next file")
-		menu_open_previous = self.filemenu.Append(self.ID_PREVIOUS_FILE, "&Previous File\t<--",
-												  " Moves to the previous file")
-		menu_goto_file_index = self.filemenu.Append(self.ID_GOTO_FILE, "&Goto File Index",
-												  " Moves to file at the specified index")
+		menu_open_previous = self.filemenu.Append(self.ID_PREVIOUS_FILE, "&Previous File\t<--", " Moves to the previous file")
+		menu_goto_file_index = self.filemenu.Append(self.ID_GOTO_FILE, "&Goto File Index", " Moves to file at the specified index")
 		menu_goto_call_index = self.filemenu.Append(self.ID_GOTO_SEGMENT, "Goto Call/Segment &Index",
 												  " Zoom in on a call/segment specified by index")
-		menu_save = self.filemenu.Append(self.ID_SAVE_FILE, "Save as &CSV\tCtrl+S",
-										 "Saves the segments in any of the open files")
+		menu_save = self.filemenu.Append(self.ID_SAVE_FILE, "Save as &CSV\tCtrl+S", "Saves the segments in any of the open files")
 		menu_exit = self.filemenu.Append(wx.ID_EXIT, "E&xit", " Terminate the program")
 
 		self.fix_menu_items()
 		self.filemenu.FindItemById(self.ID_RENDER_RASPY).Enable(False)
-		# self.filemenu.FindItemById(self.ID_RASPY_SEGMENT).Enable(False)
+		self.filemenu.FindItemById(self.ID_RASPY_SEGMENT).Enable(False)
 		self.filemenu.FindItemById(self.ID_GOTO_FILE).Enable(False)
 
 		self.colormap_menu = wx.Menu()
@@ -155,7 +159,8 @@ class MainWindow(wx.Frame):
 		self.Bind(wx.EVT_MENU, lambda e: self.on_open(opening_dir=True), menu_open_dir)
 		self.Bind(wx.EVT_MENU, lambda e: self.export_as_csv(), menu_save)
 		self.Bind(wx.EVT_MENU, lambda e: self.on_exit(), menu_exit)
-		self.Bind(wx.EVT_MENU, lambda e: self.run_algorithm(), menu_run)
+		self.Bind(wx.EVT_MENU, lambda e: self.run_transfer_learning_classifier(), menu_run)
+		self.Bind(wx.EVT_MENU, lambda e: self.run_transfer_learning_classifier(just_segment_audio=True), menu_segment)
 		self.Bind(wx.EVT_MENU, lambda e: self.goto_file_index(self.cur_file_index + 1), menu_open_next)
 		self.Bind(wx.EVT_MENU, lambda e: self.goto_file_index(self.cur_file_index - 1), menu_open_previous)
 		self.Bind(wx.EVT_MENU, lambda e: self.prompt_and_set_file_index(), menu_goto_file_index)
@@ -166,7 +171,7 @@ class MainWindow(wx.Frame):
 		self.Bind(wx.EVT_MENU, lambda e: self.spec_panel.show_colormap_sample(), menu_cmap_samp)
 		self.Bind(wx.EVT_MENU, lambda e: self.spec_panel.toggle_dynamic_colormap_range(), menu_dynamic_colormap_range)
 		self.Bind(wx.EVT_MENU, lambda e: self.prompt_and_set_colormap_bounds(), menu_set_colormap_bounds)
-		# self.Bind(wx.EVT_MENU, lambda e: self.run_segmentation(), menu_segment)
+		
 
 		self.Bind(wx.EVT_MOUSEWHEEL, self.mouse_scrolled)
 
@@ -250,80 +255,43 @@ class MainWindow(wx.Frame):
 		self.cur_file_index = 0
 
 		self.samp_freq = None
-		self.rasper = None
 		self.args = None
 
-	def run_segmentation(self):
+
+	def run_transfer_learning_classifier(self, just_segment_audio=False):
 		if self.segmenter.currently_empty():
-			if self.rasper is None:
-				self.rasper = Rasper(fileName="%s\\%s"%(self.folder_name, self.root_filename),
-									 arr = [],
-									 # arr=np.concatenate(self.data_list),   ##99% SURE THIS IS FINE TO REMOVE
-									 source=None, #??????????????????????
-									 fs=self.samp_freq)
+			(shifted_call_segments, call_classifications), self.tf_model = classify_calls_transfer_learning(
+				wav_file_or_waveform=self.data_list[self.cur_file_index],
+				frequency=self.samp_freq,
+				model_path=r'C:\Mide\rasp\raspy_cur\TESTING',
+				tf_model=self.tf_model,
+				return_tf_model=True,
+			)
+			
+			# If it's just supposed to segment and not classify, replace classifications with None
+			if just_segment_audio:
+				call_classifications = len(call_classifications) * [None]
 
-			with wx.ProgressDialog(
-					title="Segmentation Progress",
-					message='Segmenting %s'%self.file_list[self.cur_file_index].split("\\")[-1],
-					parent=self,
-					style=progress_style) as progressBar:
+			time_offset = self.cum_file_lens[self.cur_file_index]
+			
+			call_segments = (time_offset + shifted_call_segments).tolist()
+			
+			for (start_time, end_time), classification in zip(call_segments, call_classifications):
+				if not self.insert_classification(start_time, end_time, "unclassified" if classification is None else classification):
+					raise Exception(
+						"A classification tried to be inserted but failed!  The classification was: (%f,%f):%s" % (
+							start_time, end_time, classification))
 
-				self.rasper.callback = export_utils.RaspyProgressTracker(progressBar)
-				self.rasper.fileData = self.data_list[self.cur_file_index]  # CHECK WITH CONNOR THIS IS OKAY TO DO
-
-				try:
-					times = self.rasper.isolateCalls(**{k: v for k, v in self.args.items() if k != "syllableGap"})[0]
-
-					time_offset = self.cum_file_lens[self.cur_file_index]
-
-					self.segmenter.load_segments([(ary[0]+time_offset, ary[-1]+time_offset) for ary in times])
-				except export_utils.StopExecution:
-					pass
+			was_classified = [False if classification is None else True for classification in call_classifications]
+			
+			self.segmenter.load_segments(call_segments, classified=was_classified)
 
 		else:
-			wx.MessageBox("Segmentation was not done since segments already exist on this file!",
-						  "Segmentation Warning", wx.OK, self)
+			current_function = 'Segmentation' if just_segment_audio else 'Classification'
+			wx.MessageBox(f'{current_function} was not done since segments already exist on this file!',
+						  f'{current_function} Warning', wx.OK, self)
 
-	def run_algorithm(self):
-		if self.segmenter.currently_empty():
-			if self.rasper is None:
-				self.rasper = Rasper(fileName="%s\\%s"%(self.folder_name, self.root_filename),
-									 arr=[],
-									 # arr=np.concatenate(self.data_list),   ##99% SURE THIS IS FINE TO REMOVE
-									 source=None,  # ??????????????????????
-									 fs=self.samp_freq)
 
-			with wx.ProgressDialog(
-					title="Segmentation Progress",
-					message='Segmenting %s' % self.file_list[self.cur_file_index].split("\\")[-1],
-					parent=self,
-					style=progress_style) as progressBar:
-				# export_dialog.RaspyExportDialog(root=self) ##############THIS INIT FUNCTION WAS CHANGED IN A WAY THAT NEEDS CHANGING BACK ONCE EVERYTHING ELSE IS FIGURED OUT##############
-				# temp = export_dialog.RaspyExportDialog.getExport(root=self,
-				# 												 args=self.args)  ##############THIS INIT FUNCTION WAS CHANGED IN A WAY THAT NEEDS CHANGING BACK ONCE EVERYTHING ELSE IS FIGURED OUT##############
-
-				self.rasper.fullFileName = self.file_list[self.cur_file_index]
-				self.rasper.fileData = self.data_list[self.cur_file_index]  # CHECK WITH CONNOR THIS IS OKAY TO DO
-				self.rasper.callback = export_utils.RaspyProgressTracker(progressBar)
-
-				report_builder = self.rasper.classify(**self.args)
-
-				cur_time_offset = self.cum_file_lens[self.cur_file_index]
-				segs = []
-				for call in self.rasper.calls:
-					start_time = cur_time_offset + call.times[0]
-					end_time = cur_time_offset + call.times[-1]
-
-					if not self.insert_classification(start_time, end_time, call.callType):
-						raise Exception(
-							"A classification tried to be inserted but failed!  The classification was: (%f,%f):%s" % (
-							start_time, end_time, call.callType))
-
-					segs.append((start_time, end_time))
-				self.segmenter.load_segments(segs, classified=True)  # only using this for it's saftey checks (otherwise would insert calls 1 at a time)
-		else:
-			wx.MessageBox("Classification was not done since segments already exist on this file!",
-						  "Classification Warning", wx.OK, self)
 
 	def fix_menu_items(self):
 		"""
@@ -369,6 +337,11 @@ class MainWindow(wx.Frame):
 				if self.segmenter.selected_segment is not None: #####I DON'T THINK THIS IS NEEDED ANYMORE##########
 					self.zoom_into_segment(self.segmenter.selected_segment, self.cur_file_index)
 
+			elif keycode == wx.WXK_F1:
+				self.run_transfer_learning_classifier()
+			elif keycode == wx.WXK_F5:
+				self.run_transfer_learning_classifier(just_segment_audio=True)
+				
 	def mouse_scrolled(self, event):
 		if self.spec_panel.time_lims is not None:
 			relative_x_coord = event.GetLogicalPosition(wx.WindowDC(self))[0] / self.GetSize()[0]
@@ -404,7 +377,7 @@ class MainWindow(wx.Frame):
 		self.load_cur_file_spectrogram(redraw=redraw)
 		self.segmenter.switch_files(index, self.spec_panel.time_lims[0], self.spec_panel.time_lims[1], redraw=redraw)
 		self.fix_menu_items()
-		self.status_bar.SetStatusText(self.file_list[self.cur_file_index], 2)
+		self.status_bar.SetStatusText(self.file_list[self.cur_file_index], 3)
 
 	def estimate_args(self, data):
 		with wx.ProgressDialog(
@@ -412,12 +385,12 @@ class MainWindow(wx.Frame):
 				message="Calculating file parameters",
 				parent=self) as progressBar:
 
-			self.args = estimateArgs(data, self.samp_freq,
-									 callback=export_utils.RaspyArgsProgressTracker(progressBar))
+			self.args = estimateArgs(data, self.samp_freq)
 			return self.args
 
 	def load_file_info(self, file_name, samp_freq=None):
 		stored_freq, array = wavfile.read(file_name)
+
 		array = array.astype(np.float32)
 
 		if samp_freq is None:
@@ -465,7 +438,7 @@ class MainWindow(wx.Frame):
 
 		self.cur_file_index = 0
 
-		self.status_bar.SetStatusText(self.file_list[0], 2)
+		self.status_bar.SetStatusText(self.file_list[0], 3)
 
 		self.call_classifications = [SortedDict() for _ in self.data_list]
 
@@ -491,7 +464,7 @@ class MainWindow(wx.Frame):
 		for filename in os.listdir(directory):
 			if filename.endswith(".wav"):
 				wav_filenames.append(filename_helper_fn(filename))
-				file_indices.append(int(filename.split()[-1][:-4]))
+				file_indices.append(int(float(filename.split()[-1][:-4])))
 			elif filename.endswith("segments_info.csv"):
 				csv_filename = filename_helper_fn(filename)
 			elif filename.endswith(".json"):
@@ -525,7 +498,7 @@ class MainWindow(wx.Frame):
 		self.cur_file_index = 0
 		self.segmenter.cur_file_index = 0
 
-		self.status_bar.SetStatusText(self.file_list[0], 2)
+		self.status_bar.SetStatusText(self.file_list[0], 3)
 
 
 	def on_open(self, opening_dir):
@@ -563,7 +536,7 @@ class MainWindow(wx.Frame):
 				self.load_file_info(f, self.samp_freq)
 
 			self.filemenu.FindItemById(self.ID_RENDER_RASPY).Enable(True)
-			# self.filemenu.FindItemById(self.ID_RASPY_SEGMENT).Enable(True)
+			self.filemenu.FindItemById(self.ID_RASPY_SEGMENT).Enable(True)
 			self.filemenu.FindItemById(self.ID_GOTO_FILE).Enable(True)
 
 			self.load_cur_file_spectrogram()
@@ -593,13 +566,15 @@ class MainWindow(wx.Frame):
 
 		:return: True if the classification was inserted successfully, False if not
 		"""
+		assert isinstance(classification, str), "Given classification is not a string, it's instead type %s!"%str(type(classification))
+
 		intervals = [[float('-inf'), float('-inf')]] + \
 					list(self.call_classifications[self.cur_file_index]) + \
 					[[float('inf'), float('inf')]]
 
 		# Other break conditions could be used here to leave the loop faster, but the speed benifit should be super
 		# minimal so I'm leaving it as is for now
-		for j in xrange(len(intervals) - 1):
+		for j in range(len(intervals) - 1):
 			if intervals[j][1] <= start_time and intervals[j + 1][0] >= end_time:
 				if not dry_run:
 					self.call_classifications[self.cur_file_index][(start_time, end_time)] = classification
@@ -608,7 +583,7 @@ class MainWindow(wx.Frame):
 
 	def classification_chosen(self, classification):
 		if self.segmenter.selected_segment is not None:
-			if self.segmenter.selected_segment not in self.call_classifications[self.cur_file_index]:
+			if self.segmenter.selected_segment not in self.call_classifications[self.cur_file_index] or self.call_classifications[self.cur_file_index][self.segmenter.selected_segment] == 'unclassified':
 				self.segmenter.cur_segment_classified()
 
 			self.call_classifications[self.cur_file_index][self.segmenter.selected_segment] = classification
@@ -642,10 +617,11 @@ class MainWindow(wx.Frame):
 				return classification
 		return None
 
-	def set_statusbar_values(self, time_coord):
+	def set_statusbar_values(self, time_coord, freq_coord=None):
 		"""
 
 		:param time_coord: The time coordinate (offset by the file's starting time)
+		:param freq_coord: The frequency the cursor is on, if it's on the spectrogram (if not leave as None)
 
 		TODO:
 		 - Have the values disappear when not on an element that indicates time values
@@ -663,15 +639,19 @@ class MainWindow(wx.Frame):
 		if time_coord is None:
 			self.status_bar.SetStatusText("")
 			self.status_bar.SetStatusText("", 1)
+			self.status_bar.SetStatusText("", 2)
 		else:
 			self.status_bar.SetStatusText(
-				"%.3f (%.3f)" % (time_coord, time_coord - self.cum_file_lens[self.cur_file_index]))
+				"%.3f (%.3f) s" % (time_coord, time_coord - self.cum_file_lens[self.cur_file_index]))
+
+			if freq_coord is not None:
+				self.status_bar.SetStatusText("%d Hz" % np.round(freq_coord), 1)
 
 			cur_class = self.get_classification(time_coord)
 			if cur_class is None:
-				self.status_bar.SetStatusText("", 1)
+				self.status_bar.SetStatusText("", 2)
 			else:
-				self.status_bar.SetStatusText(cur_class, 1)
+				self.status_bar.SetStatusText(cur_class, 2)
 
 	def prompt_and_set_file_index(self):
 		max_index = len(self.data_list) - 1
@@ -753,7 +733,7 @@ class MainWindow(wx.Frame):
 						self.cum_file_lens[row[1]] + (len(self.data_list[row[1]]) - 1) / self.samp_freq,
 						True)
 
-				has_classification = row[9] != ""
+				has_classification = row[9] != "" and row[9] != 'unclassified'
 
 				if not self.segmenter.add_segment(row[4], row[5], has_classification, redraw=False):
 					raise Exception("The segment (%s, %s) being imported is not valid!" % (row[4], row[5]))
@@ -828,3 +808,5 @@ if __name__ == "__main__":
 	app = wx.App(False)
 	frame = MainWindow(None, "Rat-Chat Internal Classification Tool")
 	app.MainLoop()
+	
+	

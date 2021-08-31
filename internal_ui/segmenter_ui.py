@@ -288,7 +288,7 @@ class Segmenter(wx.Panel):
 
 		# Other break conditions could be used here to leave the loop faster, but the speed benifit should be super
 		# minimal so I'm leaving it as is for now
-		for j in xrange(len(intervals) - 1):
+		for j in range(len(intervals) - 1):
 			if intervals[j][1] <= start_time and intervals[j + 1][0] >= end_time:
 				return True
 		return False
@@ -326,7 +326,7 @@ class Segmenter(wx.Panel):
 		sorted_segs = sorted(segments)
 
 		# Check that no segments are overlapping
-		if any(sorted_segs[j][1] > sorted_segs[j+1][0] for j in xrange(len(segments) - 1)):
+		if any(sorted_segs[j][1] > sorted_segs[j+1][0] for j in range(len(segments) - 1)):
 			return None
 
 		return sorted_segs

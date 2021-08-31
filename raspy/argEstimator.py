@@ -17,7 +17,7 @@ def estimateArgs(data, fs, callback=ProgressPrinter()):
     msgTemplate = 'analyzing file - {:.1%}'
     with callback.context('calculating default arguments', subtotal=len(data),
                           uniform=True):
-        for i in xrange(0, len(data), chunkSize):
+        for i in range(0, len(data), chunkSize):
             completeness = i / len(data)
             callback(msgTemplate.format(completeness), count=i)
 
@@ -58,23 +58,3 @@ def estimateArgs(data, fs, callback=ProgressPrinter()):
     )
 
     return recArgs
-
-
-def main():
-    import json
-    import os
-    import sys
-    import scipy.io.wavfile
-
-    filein = sys.argv[1]
-    fs, data = scipy.io.wavfile.read(filein, True)
-
-    args = estimateArgs(data, fs)
-
-    fileout = os.path.splitext(filein)[0] + '.json'
-    with open(fileout, 'w') as fileHandle:
-        json.dump(args, fileHandle, indent=4)
-
-
-if __name__ == '__main__':
-    main()
