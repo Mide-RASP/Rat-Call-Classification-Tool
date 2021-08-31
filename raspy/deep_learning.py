@@ -20,7 +20,7 @@ try:
     from sklearn.preprocessing import MinMaxScaler
     from sklearn.model_selection import train_test_split
 
-    from tensorboard_embedding_visualization import create_matplotlib_figure, get_files_and_segments,\
+    from utility_functions import create_matplotlib_figure, get_files_and_segments,\
         create_tf_embedding_output, normalize_the_examples
 
     tf.random.set_seed(RANDOM_SEED)  # For reproducibility
@@ -270,8 +270,6 @@ def get_segment_classification_from_ann_output(ann_output, smoothing_window_leng
             call_labels = call_labels[~ to_remove_mask]
             
         elif np.any(overlapping_call_mask):
-            print("we did it!")
-            
             abs_distance_between_calls = np.abs(space_between_calls)
             
             call_start_or_stop_indecies[np.r_[False, overlapping_call_mask],0] += abs_distance_between_calls[overlapping_call_mask]/2
@@ -279,8 +277,7 @@ def get_segment_classification_from_ann_output(ann_output, smoothing_window_leng
             call_start_or_stop_indecies[np.r_[overlapping_call_mask, False],1] -= abs_distance_between_calls[overlapping_call_mask]/2
             
             should_remove = np.squeeze(np.diff(call_start_or_stop_indecies, axis=1)) <= 0
-            print(should_remove)
-            print(should_remove.shape)
+            
             if np.any(should_remove):
                 call_start_or_stop_indecies = call_start_or_stop_indecies[~ should_remove, :]
                 call_indices = call_indices[~ should_remove]

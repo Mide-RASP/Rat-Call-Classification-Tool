@@ -1,0 +1,15 @@
+# The versions listed are known to work, but are not necessarily the only versions which will work.
+
+numpy>= 1.20.0
+tensorflow==2.4.1
+scipy==1.6.3
+matplotlib==3.4.2
+wxpython==4.1.1
+sortedcontainers==2.4.0
+
+
+# The following dependencies are only needed if you are going to be
+# training your own models:
+tensorboard==2.6.0
+tensorflow_hub==2.4.1
+sklearn==0.24.2
