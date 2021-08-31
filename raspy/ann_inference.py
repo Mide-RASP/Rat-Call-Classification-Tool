@@ -21,7 +21,7 @@ except ImportError:
     print("No TensorFlow Imported!")
     
 
-from raspy.tf_hub_testing import load_examples_and_labels_from_waveform, get_segment_classification_from_ann_output
+from raspy.deep_learning import load_examples_and_labels_from_waveform, get_segment_classification_from_ann_output
 
 
 
