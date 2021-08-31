@@ -3,11 +3,15 @@
 ## Description:
 This tool is used for the manual classification and exploration of ultrasonic rat vocalizations, and has an intuitive user interface for doing this.  It's primary use case is to generate a set of manual classificiations of recordings of rat audio, so that machine learning models could be trained on the data.
 
+## Machine Learning Classifier
+In order to classify rat calls using Machine Learning, good data is required.  Unfortunately there's no abundance of manually classified rat audio, so to help mitigate this, a transfer learning approach is utilized.  Using a [pre-trained ResNet-50 network](https://tfhub.dev/google/humpback_whale/1) designed to identify whale sounds in underwater audio recorings as our source model, it outperforms any other approach we're aware of on the same limited dataset.
+
 ## Raspy Classification Tool Quick-Start Guide 
+This section is intended to make it easier to get started using this tool, but it only covers a portion of the things that can be done.  After going through this section, exploring what else you can do with this software should be easy!
 
 ### Tool Anatomy:
 
-![Image Of Tool](https://lh3.googleusercontent.com/9VOkL2UMKDayPiYjABYDyWeZjNbBG7WduOMmtmR2LtPrPe0eiguTtdpwAZlHrDKlps7AL9Tyyq58Kk9EdWqq_izADOqivom6P2g6r0RC7QkIv-W_qHazqQk76cV9nY6u7gjra2SFPeVoc28RcvxrWsCpCDRhxMIwp6WvXb1KiG2F4CVE6Op5iYjG03DqPGby8WIMPcvKv-gZHpPRvdzWQorDfcQubZmPY62UZjV7W6-O60hB6efZ1ZkoAso1zKftnUlDu4_v4RvdzIiovLTs_7FHcvKluJMjhRKaztrF1R3YaWsJgm6PGVHhLFSEUw9FUIooJ51LAlxakgcefWjPzZUiq-uQlI3O4A5KtwRcl6CBKyeK5Iu8C1UTxGOI1b9gRJF8d2yhjJ5Kdt3uPDNtQd_lFV0ED8Jv5Aai_aR069p8XovXJEHpjs7LRBwjKYDfhia4vtzrr_3AeXJX4x0C4lpl9s3Foax6vEqOf4gGjeOInFFPczIXUSqiwGEAWGHPhEMKFNOwlfVGVNuKpV84p9uoFnXzjvKrolpIjq3-IaiUDxY87-sElyKVdmE8izMz40WrMZVKPVUJZyQglz7Zit_pzeOy-Ke04WUoN3EwQg9lIlC_J3wwOpxOpE7eS_QwaNByFYNCwT0r4z4rxK7Zjd-Qj6zFDzbVl92R0imHqDYC_r-ZFIhDaqVAJOjhucewWU4-hq00o7xzYyzv-khj_-8p=w898-h961-no?authuser=0)
+![Image Of Tool](https://i.imgur.com/hsyHqBw.png)
 
  | *Name* | *Explanation* 
 :---: | :---: | ---
@@ -47,6 +51,9 @@ Left/Right Arrows | Moves between the files (generated when the initial .wav fil
 Z | Zooms into the segment/call currently selected 
 Ctrl + Left/Right Arrows  | Zooms into the next or previous segment/call (relative to the call currently selected) 
 Delete | Removes the classification currently selected 
+
+## Data:
+All the manually classified data used in this project is publically available in the following repository: [Rat-Vocalization-Data](https://github.com/Mide-RASP/Rat-Vocalization-Data)
 
 ## Support:
 
